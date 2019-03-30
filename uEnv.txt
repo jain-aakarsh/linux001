@@ -1,0 +1,25 @@
+optargs =
+mmcpart =1
+loadfdt = load mmc ${ mmcdev }: $ { mmcpart } ${ fdtaddr } / boot / dtbs /${ fdtfile }
+loadinitrd = load mmc $ { mmcdev }: ${ mmcpart } ${ rdaddr } / boot / initrd - custom . img ; setenv rdsize 0 x$ { filesize }
+loaduimage = mw . l 4804 c134 fe1fffff ; if load mmc 0: ${ mmcpart } ${ loadaddr } / boot / zImage ; then setenv mmcdev 0;
+setenv mmcroot / dev / mapper / myencfs ; mw .l 4804 c194 01200000; echo Booting from external microSD ...; else setenv
+mmcdev 1; if test $mmc0 = 1; then setenv mmcroot / dev / mmcblk1p3 rw ; fi ; load mmc 1:2 $ { loadaddr } / boot / zImage
+; mw . l 4804 c194 00 c00000 ; echo Booting from internal eMMC ...; fi
+# To boot with an initrd , add to mmcargs :
+#
+initrd = ${ rdaddr } , ${ rdsize }
+# To load the encryption key from the TPM ( custom hook in initrd ) add to mmcargs :
+#
+cryptdevice =/ dev / mmcblk0p2 : myencfs : use - tpm
+mmcargs = setenv bootargs console = tty0 console =${ console } ${ optargs } root = $ { mmcroot } rootfstype = $ { mmcrootfstype }
+rw initrd = $ { rdaddr } ,${ rdsize } cryptdevice =/ dev / mmcblk0p4 : myencfs : use - tpm
+# To boot with an initrd , change mmcboot to the following :
+#
+mmcboot = run mmcargs ; bootz ${ loadaddr } ${ rdaddr }: ${ rdsize } $ { fdtaddr }
+mmcboot = run mmcargs ; bootz ${ loadaddr } ${ rdaddr }: ${ rdsize } ${ fdtaddr }
+# To boot with an initrd , add ' run loadinitrd ' before ' run mmcboot '
+uenvcmd = i2c mw 0 x24 1 0 x3e ; run findfdt ; if test $board_name = A335BNLT ; then setenv mmcdev 1; mmc dev $ {
+mmcdev }; if mmc rescan ; then setenv mmc1 1; else setenv mmc1 0; fi ; fi ; setenv mmcdev 0; mmc dev $ { mmcdev }; if
+mmc rescan ; then setenv mmc0 1; else setenv mmc0 0; fi ; run loaduimage && run loadfdt && run loadinitrd &&
+run mmcboot
